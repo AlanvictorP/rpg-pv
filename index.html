@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tormenta — Controle de PV</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root{
+      --t-red:#c1121f;
+      --t-green:#2b9348;
+      --t-amber:#ffba08;
+      --t-blue:#3b82f6;
+      --t-gray:#94a3b8;
+    }
+    body{background:#0f172a;color:#e2e8f0}
+    .navbar{background:#111827}
+    .card{background:#0b1220;border:1px solid #263043}
+
+    .form-control,.form-select{background:#0f172a;border-color:#334155;color:#e9f1ff}
+    .form-control:focus,.form-select:focus{box-shadow:none;border-color:#7aa2d6}
+
+    .form-text{color:#b8c7e0}
+    .form-label{color:#e5edf7}
+    .form-control::placeholder{color:#9fb0cc;opacity:1}
+
+    .btn-outline-light{--bs-btn-color:#e2e8f0;--bs-btn-border-color:#475569}
+    .pv-bar{height:10px;background:#1f2937;border-radius:6px;overflow:hidden}
+    .pv-fill{height:100%;background:var(--t-green)}
+    .pv-low{background:var(--t-amber)}
+    .pv-critical{background:var(--t-red)}
+    .table thead th{border-color:#263043;color:#cbd5e1}
+    .table tbody td{border-color:#1e293b;vertical-align:middle}
+    .badge-session{background:#1e293b;border:1px solid #334155}
+    .small-muted{color:#94a3b8}
+    .btn-step{min-width:2.4rem}
+    .avatar{width:40px;height:40px;border-radius:50%;object-fit:contain;background:#111827;border:1px solid #334155;margin-right:.25rem}
+
+    .tag{display:inline-block;padding:.2rem .6rem;border-radius:999px;font-size:.8rem;line-height:1;border:1px solid transparent;white-space:nowrap}
+    .tag-dano{border-color:var(--t-red);background:#c1121f1a;color:#fecaca}
+    .tag-cura{border-color:var(--t-green);background:#2b93481a;color:#bbf7d0}
+    .tag-curatotal{border-color:var(--t-green);background:#2b93482b;color:#dcfce7}
+    .tag-set{border-color:var(--t-amber);background:#ffba081a;color:#fde68a}
+    .tag-info{border-color:var(--t-blue);background:#3b82f61a;color:#bfdbfe}
+    .tag-remov{border-color:#ef4444;background:#ef44441a;color:#fecaca}
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg border-bottom border-secondary-subtle">
+    <div class="container-fluid">
+      <span class="navbar-brand text-light fw-semibold">Tormenta — Controle de PV</span>
+      <div class="d-flex flex-wrap gap-2 ms-auto">
+        <button id="btnExportar" class="btn btn-sm btn-outline-light" title="Exportar sessão atual (JSON)">Exportar</button>
+        <label class="btn btn-sm btn-outline-light mb-0" title="Importar sessão (substitui)">
+          Importar <input id="fileImport" type="file" accept="application/json" hidden>
+        </label>
+        <label class="btn btn-sm btn-outline-light mb-0" title="Importar e MESCLAR na sessão atual">
+          Importar (mesclar) <input id="fileImportMerge" type="file" accept="application/json" hidden>
+        </label>
+        <button id="btnExportarTudo" class="btn btn-sm btn-outline-light" title="Exporta TODAS as sessões salvas">Exportar Tudo</button>
+        <label class="btn btn-sm btn-outline-light mb-0" title="Importar e adicionar várias sessões">
+          Importar Tudo <input id="fileImportAll" type="file" accept="application/json" hidden>
+        </label>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+    <input id="fileTokenRow" type="file" accept="image/png" hidden>
+
+    <!-- Sessão -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="row g-3 align-items-end">
+          <div class="col-12 col-md-4">
+            <label for="numSessao" class="form-label">Número da sessão</label>
+            <input id="numSessao" class="form-control" type="text" placeholder="ex.: 12" />
+            <div class="form-text">Usado para salvar/recuperar no seu navegador.</div>
+          </div>
+          <div class="col-12 col-md-8 d-flex gap-2">
+            <button id="btnCarregarSessao" class="btn btn-success">Carregar / Criar</button>
+            <button id="btnNovaSessao" class="btn btn-outline-light">Nova sessão</button>
+            <button id="btnApagarSessao" class="btn btn-outline-danger ms-auto">Apagar sessão</button>
+          </div>
+        </div>
+        <div id="statusSessao" class="mt-3 small-muted"></div>
+      </div>
+    </div>
+
+    <!-- Adicionar personagem -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <h6 class="mb-3">Adicionar personagem</h6>
+        <div class="row g-3">
+          <div class="col-12 col-sm-4">
+            <label for="nome" class="form-label">Nome</label>
+            <input id="nome" class="form-control" type="text" placeholder="ex.: Abelar" />
+          </div>
+          <div class="col-6 col-sm-2">
+            <label for="pvmax" class="form-label">PV Máx.</label>
+            <input id="pvmax" class="form-control" type="number" min="1" value="10" />
+          </div>
+          <div class="col-12 col-sm-3">
+            <label for="token" class="form-label">Token (PNG)</label>
+            <input id="token" class="form-control" type="file" accept="image/png" />
+            <div class="form-text">Opcional. PNG com fundo transparente.</div>
+          </div>
+          <div class="col-12 col-sm-3 d-grid">
+            <label class="form-label">&nbsp;</label>
+            <button id="btnAdicionar" class="btn btn-primary">Adicionar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de personagens -->
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <h6 class="m-0">Personagens</h6>
+          <div class="small-muted" id="resumoGrupo">—</div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-dark table-striped align-middle" id="tabela">
+            <thead>
+              <tr>
+                <th style="width:22%">Personagem</th>
+                <th style="width:18%">PV</th>
+                <th style="width:22%">Barra</th>
+                <th style="width:22%">Dano/Cura</th>
+                <th style="width:16%" class="text-end">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="lista"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="card mt-3">
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+          <h6 class="m-0 me-auto">Log de ações</h6>
+          <div class="d-flex gap-2">
+            <select id="filtroPersonagem" class="form-select form-select-sm" style="min-width:220px">
+              <option value="">Todos os personagens</option>
+            </select>
+            <button id="btnExportarLog" class="btn btn-sm btn-outline-light">Exportar CSV</button>
+            <button id="btnLimparLog" class="btn btn-sm btn-outline-danger">Limpar log</button>
+          </div>
+        </div>
+        <div class="table-responsive" style="max-height:300px; overflow:auto">
+          <table class="table table-dark table-striped align-middle">
+            <thead>
+              <tr>
+                <th style="width:30%">Personagem</th>
+                <th style="width:22%">Ação</th>
+                <th style="width:14%">Δ PV</th>
+                <th style="width:34%">PV após</th>
+              </tr>
+            </thead>
+            <tbody id="logBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <p class="mt-3 small-muted">Dica: ajuste o **PV** e o **PV Máx.** direto na tabela; Enter confirma.</p>
+  </main>
+
+  <script>
+    // ====== Helpers & Estado ======
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+    const storageKey = s => `tormenta_pv_sessao_${s}`;
+
+    let state = { sessao:"", personagens:[], logs:[] }; // personagens: {id,nome,pv,pvmax,token}; logs: {id,ts,charId,nome,action,delta,pv,pvmax}
+    function uid(){ return Math.random().toString(36).slice(2,9); }
+    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+    function escapeHtml(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+
+    function load(sessao){
+      const raw = localStorage.getItem(storageKey(sessao));
+      if(!raw){ state = { sessao, personagens:[], logs:[] }; save(); return; }
+      state = JSON.parse(raw);
+      if(!Array.isArray(state.logs)) state.logs = [];
+    }
+    function save(){
+      if(!state.sessao) return;
+      localStorage.setItem(storageKey(state.sessao), JSON.stringify(state));
+      render();
+    }
+
+    // ====== UI Sessão ======
+    const numSessao = $('#numSessao');
+    const btnCarregarSessao = $('#btnCarregarSessao');
+    const btnNovaSessao = $('#btnNovaSessao');
+    const btnApagarSessao = $('#btnApagarSessao');
+    const statusSessao = $('#statusSessao');
+
+    btnCarregarSessao.addEventListener('click', () => {
+      const s = (numSessao.value||'').trim();
+      if(!s){ alert('Informe o número da sessão.'); return; }
+      load(s);
+      statusSessao.innerHTML = `Sessão <span class="badge rounded-pill badge-session">${s}</span> carregada.`;
+      render();
+      localStorage.setItem('tormenta_pv_last', s);
+    });
+
+    btnNovaSessao.addEventListener('click', () => {
+      const s = prompt('Número da nova sessão?');
+      if(!s) return;
+      state = { sessao:s.trim(), personagens:[], logs:[] };
+      save();
+      numSessao.value = state.sessao;
+      statusSessao.innerHTML = `Sessão <span class="badge rounded-pill badge-session">${state.sessao}</span> criada.`;
+      localStorage.setItem('tormenta_pv_last', state.sessao);
+    });
+
+    btnApagarSessao.addEventListener('click', () => {
+      if(!state.sessao){ alert('Nenhuma sessão carregada.'); return; }
+      if(confirm(`Apagar dados da sessão ${state.sessao}?`)){
+        localStorage.removeItem(storageKey(state.sessao));
+        state.personagens = [];
+        state.logs = [];
+        render();
+        statusSessao.textContent = 'Sessão apagada do navegador.';
+      }
+    });
+
+    // ====== Adicionar personagem ======
+    const nome = $('#nome');
+    const pvmax = $('#pvmax');
+    const tokenInput = $('#token');
+    const fileTokenRow = $('#fileTokenRow');
+
+    $('#btnAdicionar').addEventListener('click', async () => {
+      if(!state.sessao){ alert('Carregue ou crie uma sessão primeiro.'); return; }
+      const n = (nome.value||'').trim();
+      const m = parseInt(pvmax.value,10)||0;
+      if(!n || m<=0){ alert('Informe nome e PV Máx. válidos.'); return; }
+
+      let tokenData = null;
+      if(tokenInput && tokenInput.files && tokenInput.files[0]){
+        try{ tokenData = await toDataURL(tokenInput.files[0]); }catch(e){ console.warn('Falha ao ler token:', e); }
+      }
+      const p = { id:uid(), nome:n, pv:m, pvmax:m, token: tokenData };
+      state.personagens.push(p);
+      logEvent(p, 'criado', 0);
+      nome.value = '';
+      if(tokenInput) tokenInput.value = '';
+      save();
+    });
+
+    // ====== Render ======
+    const lista = $('#lista');
+    const resumoGrupo = $('#resumoGrupo');
+    const filtroPersonagem = $('#filtroPersonagem');
+    const logBody = $('#logBody');
+
+    function render(){
+      lista.innerHTML = '';
+      for(const p of state.personagens){
+        const tr = document.createElement('tr');
+        const pct = Math.max(0, Math.min(100, Math.round((p.pv / p.pvmax) * 100)));
+        const barClass = pct <= 25 ? 'pv-critical' : pct <= 50 ? 'pv-low' : '';
+        tr.innerHTML = `
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              ${p.token ? `<img src="${p.token}" class="avatar" alt="token">` : `<div class="avatar d-flex justify-content-center align-items-center small-muted">—</div>`}
+              <div class="fw-semibold">${escapeHtml(p.nome)}</div>
+            </div>
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <input type="number" class="form-control form-control-sm" value="${p.pv}" min="-999" max="${p.pvmax}" data-act="setPv" data-id="${p.id}" style="max-width:90px">
+              <span class="small-muted">/</span>
+              <input type="number" class="form-control form-control-sm" value="${p.pvmax}" min="1" data-act="setPvMax" data-id="${p.id}" title="PV Máx." style="max-width:90px">
+            </div>
+          </td>
+          <td>
+            <div class="pv-bar"><div class="pv-fill ${barClass}" style="width:${pct}%"></div></div>
+            <div class="small-muted mt-1">${pct}%</div>
+          </td>
+          <td>
+            <div class="input-group input-group-sm">
+              <button class="btn btn-outline-light btn-step" data-act="step" data-delta="-5" data-id="${p.id}">−5</button>
+              <button class="btn btn-outline-light btn-step" data-act="step" data-delta="-1" data-id="${p.id}">−1</button>
+              <input type="number" class="form-control text-center" placeholder="±X" data-act="delta" data-id="${p.id}" />
+              <button class="btn btn-outline-light btn-step" data-act="step" data-delta="1" data-id="${p.id}">+1</button>
+              <button class="btn btn-outline-light btn-step" data-act="step" data-delta="5" data-id="${p.id}">+5</button>
+            </div>
+          </td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-light me-2" data-act="token" data-id="${p.id}">Token</button>
+            <button class="btn btn-sm btn-outline-light me-2" data-act="curaTotal" data-id="${p.id}">Cura total</button>
+            <button class="btn btn-sm btn-outline-danger" data-act="remover" data-id="${p.id}">Remover</button>
+          </td>`;
+        lista.appendChild(tr);
+      }
+
+      const total = state.personagens.length;
+      const somaMax = state.personagens.reduce((a,b)=>a+b.pvmax,0);
+      const somaAtual = state.personagens.reduce((a,b)=>a+Math.max(0,b.pv),0);
+      resumoGrupo.textContent = total ? `${total} personagem(ns) • PV do grupo: ${somaAtual}/${somaMax}` : 'Nenhum personagem adicionado.';
+
+      const selVal = filtroPersonagem.value;
+      filtroPersonagem.innerHTML = '<option value="">Todos os personagens</option>' + state.personagens.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+      if([...filtroPersonagem.options].some(o=>o.value===selVal)) filtroPersonagem.value = selVal;
+
+      $$('[data-act]').forEach(el => {
+        const act = el.getAttribute('data-act');
+        if(act==='step' || act==='token' || act==='curaTotal' || act==='remover'){
+          el.addEventListener('click', onAction);
+        } else if(act==='delta' || act==='setPv' || act==='setPvMax'){
+          el.addEventListener('change', onChange);
+          el.addEventListener('keyup', ev=>{ if(ev.key==='Enter') onChange(ev); });
+        }
+      });
+
+      renderLog();
+    }
+
+    // ====== Log ======
+    function logEvent(p, action, delta){
+      state.logs.unshift({ id: uid(), ts: Date.now(), charId: p.id, nome: p.nome, action, delta, pv: p.pv, pvmax: p.pvmax });
+    }
+
+    function actionTag(action){
+      const a = action.toLowerCase();
+      if(a.startsWith('dano')) return 'tag tag-dano';
+      if(a.startsWith('cura total')) return 'tag tag-curatotal';
+      if(a.startsWith('cura')) return 'tag tag-cura';
+      if(a.startsWith('set pv máx')) return 'tag tag-set';
+      if(a.startsWith('set pv')) return 'tag tag-set';
+      if(a.startsWith('criado')) return 'tag tag-info';
+      if(a.startsWith('remov')) return 'tag tag-remov';
+      return 'tag';
+    }
+
+    function renderLog(){
+      const filtro = filtroPersonagem.value || '';
+      const rows = (state.logs||[]).filter(l => !filtro || l.charId===filtro);
+      logBody.innerHTML = rows.map(l=>`
+        <tr>
+          <td>${escapeHtml(l.nome)}</td>
+          <td><span class="${actionTag(l.action)}">${escapeHtml(l.action)}</span></td>
+          <td>${l.delta>0?`+${l.delta}`:l.delta}</td>
+          <td>${Math.max(0,l.pv)}/${l.pvmax}</td>
+        </tr>`).join('') || `<tr><td colspan="4" class="small-muted">Sem eventos.</td></tr>`;
+    }
+
+    filtroPersonagem.addEventListener('change', renderLog);
+    $('#btnLimparLog').addEventListener('click', ()=>{ if(confirm('Limpar log desta sessão?')){ state.logs = []; save(); } });
+
+    $('#btnExportarLog').addEventListener('click', ()=>{
+      const header = 'personagem;acao;delta;pv;pvmax\n';
+      const toLine = l => `${l.nome};${l.action};${l.delta};${l.pv};${l.pvmax}`;
+      const csv = header + (state.logs||[]).map(toLine).join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `tormenta_log_${state.sessao||'sessaosemnumero'}.csv`; a.click(); URL.revokeObjectURL(a.href);
+    });
+
+    // ====== Handlers ======
+    function onAction(ev){
+      const act = ev.currentTarget.getAttribute('data-act');
+      const id = ev.currentTarget.getAttribute('data-id');
+      const p = state.personagens.find(x=>x.id===id);
+      if(!p) return;
+
+      if(act==='step'){
+        const delta = parseInt(ev.currentTarget.getAttribute('data-delta'),10)||0;
+        const before = p.pv;
+        p.pv = clamp(p.pv + delta, -999, p.pvmax);
+        if(p.pv!==before) logEvent(p, delta>0? 'cura(+btn)':'dano(-btn)', p.pv-before);
+        save();
+      } else if(act==='token'){
+        window._targetTokenId = id;
+        fileTokenRow.click();
+      } else if(act==='curaTotal'){
+        const before = p.pv; p.pv = p.pvmax; logEvent(p, 'cura total', p.pv-before); save();
+      } else if(act==='remover'){
+        if(confirm(`Remover ${p.nome}?`)){
+          logEvent(p, 'removido', 0);
+          state.personagens = state.personagens.filter(x=>x.id!==id); save();
+        }
+      }
+    }
+
+    function onChange(ev){
+      const el = ev.currentTarget;
+      const act = el.getAttribute('data-act');
+      const id = el.getAttribute('data-id');
+      const p = state.personagens.find(x=>x.id===id);
+      if(!p) return;
+
+      if(act==='delta'){
+        const v = parseInt(el.value,10)||0;
+        if(v!==0){
+          const before=p.pv;
+          p.pv = clamp(p.pv + v, -999, p.pvmax);
+          el.value='';
+          if(p.pv!==before) logEvent(p, v>0?'cura(+X)':'dano(-X)', p.pv-before);
+          save();
+        }
+      } else if(act==='setPv'){
+        const v = parseInt(el.value,10);
+        const before=p.pv;
+        p.pv = clamp(isNaN(v)?p.pv:v, -999, p.pvmax);
+        if(p.pv!==before) logEvent(p, 'set PV', p.pv-before);
+        save();
+      } else if(act==='setPvMax'){
+        let v = parseInt(el.value,10);
+        if(isNaN(v) || v < 1){ v = 1; el.value = 1; }
+        const oldMax = p.pvmax;
+        p.pvmax = v;
+        // se PV atual passou do novo máximo, clamp e loga ajuste
+        const beforePv = p.pv;
+        p.pv = clamp(p.pv, -999, p.pvmax);
+        logEvent(p, 'set PV Máx', p.pvmax - oldMax);
+        if(p.pv !== beforePv){
+          // registra que PV foi ajustado pelo novo máximo
+          logEvent(p, 'set PV (ajustado pelo Máx)', p.pv - beforePv);
+        }
+        save();
+      }
+    }
+
+    // ====== Token util ======
+    async function toDataURL(file){
+      const MAX = 512;
+      const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
+      const ratio = Math.min(1, MAX/Math.max(img.width, img.height));
+      const w = Math.round(img.width*ratio), h = Math.round(img.height*ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,w,h);
+      ctx.drawImage(img,0,0,w,h);
+      const data = canvas.toDataURL('image/png');
+      URL.revokeObjectURL(img.src);
+      return data;
+    }
+
+    // ====== Exportar/Importar (sessão atual) ======
+    $('#btnExportar').addEventListener('click', () => {
+      if(!state.sessao){ alert('Carregue uma sessão.'); return; }
+      const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `tormenta_pv_sessao_${state.sessao}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    $('#fileImport').addEventListener('change', async (ev) => {
+      const file = ev.target.files?.[0];
+      if(!file) return;
+      try{
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if(!data.sessao || !Array.isArray(data.personagens)) throw new Error('Formato inválido');
+        if(!Array.isArray(data.logs)) data.logs = [];
+        state = data; save();
+        numSessao.value = state.sessao;
+        statusSessao.innerHTML = `Sessão <span class="badge rounded-pill badge-session">${state.sessao}</span> importada (substituição).`;
+        localStorage.setItem('tormenta_pv_last', state.sessao);
+        ev.target.value = '';
+      }catch(err){ alert('Falha ao importar: '+ err.message); }
+    });
+
+    // ====== Importar (MESCLAR) na sessão atual ======
+    $('#fileImportMerge').addEventListener('change', async (ev) => {
+      const file = ev.target.files?.[0];
+      if(!file) return;
+      try{
+        const text = await file.text();
+        const incoming = JSON.parse(text);
+        if(!incoming.sessao || !Array.isArray(incoming.personagens)) throw new Error('Formato inválido');
+
+        if(!state.sessao){
+          state = { sessao: incoming.sessao, personagens: [], logs: [] };
+        }
+        const byName = (x) => x.nome.trim().toLowerCase();
+        const mapAtual = new Map(state.personagens.map(p=>[byName(p), p]));
+        for(const inc of incoming.personagens){
+          const key = byName(inc);
+          if(mapAtual.has(key)){
+            const cur = mapAtual.get(key);
+            cur.pvmax = Math.max(cur.pvmax, inc.pvmax||cur.pvmax);
+            cur.pv = clamp(inc.pv ?? cur.pv, -999, cur.pvmax);
+            if(inc.token && !cur.token) cur.token = inc.token;
+          } else {
+            state.personagens.push({
+              id: inc.id || uid(),
+              nome: inc.nome,
+              pv: inc.pv,
+              pvmax: inc.pvmax,
+              token: inc.token || null
+            });
+          }
+        }
+        if(!Array.isArray(incoming.logs)) incoming.logs = [];
+        const seen = new Set((state.logs||[]).map(l=>`${l.id}|${l.ts}`));
+        for(const l of incoming.logs){
+          const k = `${l.id}|${l.ts}`;
+          if(!seen.has(k)){ state.logs.push(l); seen.add(k); }
+        }
+        state.logs.sort((a,b)=> (b.ts||0)-(a.ts||0));
+
+        save();
+        statusSessao.innerHTML = `Sessão <span class="badge rounded-pill badge-session">${state.sessao}</span> mesclada com arquivo de "${incoming.sessao}".`;
+        ev.target.value = '';
+      }catch(err){ alert('Falha ao importar/mesclar: '+ err.message); }
+    });
+
+    // ====== Exportar / Importar TODAS as sessões ======
+    function listarTodasSessoes(){
+      const out = [];
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(k && k.startsWith('tormenta_pv_sessao_')){
+          const raw = localStorage.getItem(k);
+          try{
+            const obj = JSON.parse(raw||'{}');
+            if(obj && obj.sessao) out.push(obj);
+          }catch(_){}
+        }
+      }
+      return out;
+    }
+
+    $('#btnExportarTudo').addEventListener('click', ()=>{
+      const todas = listarTodasSessoes();
+      if(!todas.length){ alert('Nenhuma sessão salva no navegador.'); return; }
+      const payload = { __tipo:"tormenta_pv_pacote", versao:1, geradoEm: new Date().toISOString(), sessoes: todas };
+      const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `tormenta_pv_todas_sessoes.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    $('#fileImportAll').addEventListener('change', async (ev)=>{
+      const file = ev.target.files?.[0];
+      if(!file) return;
+      try{
+        const text = await file.text();
+        const pkg = JSON.parse(text);
+        const sessoes = Array.isArray(pkg?.sessoes) ? pkg.sessoes
+                        : (Array.isArray(pkg) ? pkg : [pkg]).filter(o=>o && o.sessao);
+
+        if(!sessoes.length) throw new Error('Arquivo não contém sessões.');
+
+        let count=0;
+        for(const s of sessoes){
+          if(!s.sessao || !Array.isArray(s.personagens)) continue;
+          const key = storageKey(s.sessao);
+          const raw = localStorage.getItem(key);
+          if(raw){
+            let atual = {};
+            try{ atual = JSON.parse(raw)||{}; }catch(_){}
+            const tmpState = { sessao: s.sessao, personagens: Array.isArray(atual.personagens)?atual.personagens:[], logs: Array.isArray(atual.logs)?atual.logs:[] };
+            const incoming = { sessao: s.sessao, personagens: s.personagens||[], logs: s.logs||[] };
+            (function mergeInto(tmp, inc){
+              const byName = (x)=> x.nome.trim().toLowerCase();
+              const mapAtual = new Map(tmp.personagens.map(p=>[byName(p), p]));
+              for(const it of inc.personagens){
+                const keyN = byName(it);
+                if(mapAtual.has(keyN)){
+                  const cur = mapAtual.get(keyN);
+                  cur.pvmax = Math.max(cur.pvmax, it.pvmax||cur.pvmax);
+                  cur.pv = clamp(it.pv ?? cur.pv, -999, cur.pvmax);
+                  if(it.token && !cur.token) cur.token = it.token;
+                } else {
+                  tmp.personagens.push({ id: it.id || uid(), nome: it.nome, pv: it.pv, pvmax: it.pvmax, token: it.token||null });
+                }
+              }
+              const seen = new Set((tmp.logs||[]).map(l=>`${l.id}|${l.ts}`));
+              for(const l of (inc.logs||[])){
+                const k = `${l.id}|${l.ts}`;
+                if(!seen.has(k)){ tmp.logs.push(l); seen.add(k); }
+              }
+              tmp.logs.sort((a,b)=> (b.ts||0)-(a.ts||0));
+            })(tmpState, incoming);
+
+            localStorage.setItem(key, JSON.stringify(tmpState));
+          } else {
+            localStorage.setItem(key, JSON.stringify({ sessao:s.sessao, personagens:s.personagens||[], logs:s.logs||[] }));
+          }
+          count++;
+        }
+        if(!state.sessao && sessoes[0]?.sessao){
+          load(sessoes[0].sessao);
+          numSessao.value = state.sessao;
+          localStorage.setItem('tormenta_pv_last', state.sessao);
+          render();
+        }
+        statusSessao.innerHTML = `${count} sessão(ões) importadas/mescladas com sucesso.`;
+        ev.target.value = '';
+      }catch(err){
+        alert('Falha ao importar tudo: '+err.message);
+      }
+    });
+
+    // ====== Inicial ======
+    const last = localStorage.getItem('tormenta_pv_last');
+    if(last){ numSessao.value = last; load(last); render(); statusSessao.innerHTML = `Sessão <span class="badge rounded-pill badge-session">${last}</span> carregada automaticamente.`; }
+    numSessao.addEventListener('change', ()=>{ localStorage.setItem('tormenta_pv_last', (numSessao.value||'').trim()); });
+
+    fileTokenRow.addEventListener('change', async (ev)=>{
+      const file = ev.target.files?.[0];
+      if(!file || !window._targetTokenId) return;
+      try{
+        const data = await toDataURL(file);
+        const p = state.personagens.find(x=>x.id===window._targetTokenId);
+        if(p){ p.token = data; save(); }
+      }catch(e){ alert('Falha ao carregar token: '+e.message); }
+      finally{ ev.target.value=''; window._targetTokenId = null; }
+    });
+  </script>
+</body>
+</html>
