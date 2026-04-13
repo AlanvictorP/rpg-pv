@@ -1,0 +1,324 @@
+:root {
+  --bg-deep: #020617;
+  --bg-card: rgba(15, 23, 42, 0.7);
+  --accent: #38bdf8;
+  --accent-glow: rgba(56, 189, 248, 0.3);
+  --t-pvtemp: #facc15; /* Amarelo Ouro Vivo */
+  --t-pvtemp-glow: rgba(250, 204, 21, 0.4);
+  --t-red: #ef4444;
+  --t-green: #22c55e;
+  --t-amber: #f59e0b;
+  --t-blue: #3b82f6;
+  --t-gray: #64748b;
+  --border: rgba(51, 65, 85, 0.5);
+  --glass-bg: rgba(30, 41, 59, 0.5);
+}
+
+body {
+  background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+  color: #f1f5f9;
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  background-attachment: fixed;
+}
+
+h1, h2, h3, h4, h5, h6, .navbar-brand, .font-outfit {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Glassmorphism Classes */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s ease;
+}
+
+.navbar {
+  background: rgba(2, 6, 23, 0.8);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 0;
+}
+
+.navbar-brand {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #38bdf8, #818cf8);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.form-control, .form-select {
+  background: var(--glass-bg);
+  border: 1px solid var(--border);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  transition: all 0.2s;
+}
+
+.form-control:focus, .form-select:focus {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+  color: #fff;
+}
+
+.btn {
+  border-radius: 10px;
+  font-weight: 500;
+  padding: 0.6rem 1.2rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+  border: none;
+  box-shadow: 0 4px 14px 0 rgba(14, 165, 233, 0.39);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.45);
+}
+
+.btn-outline-light {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-outline-light:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent);
+}
+
+/* HP Bars */
+.pv-bar-container {
+  position: relative;
+  height: 12px;
+  background: #1e293b;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  z-index: 1;
+}
+
+.pv-fill {
+  height: 100%;
+  background: linear-gradient(to right, #22c55e, #4ade80);
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+.pv-low { background: linear-gradient(to right, #f59e0b, #fbbf24); box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
+.pv-critical { background: linear-gradient(to right, #ef4444, #f87171); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+
+.pv-temp-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(250, 204, 21, 0.4), rgba(250, 204, 21, 0.2));
+  border-right: 2px solid var(--t-pvtemp);
+  z-index: 2;
+  box-shadow: 0 0 10px var(--t-pvtemp-glow);
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--glass-bg);
+  border: 2px solid var(--border);
+  padding: 2px;
+}
+
+/* Correções para o Dropdown na Tabela */
+.table-responsive {
+  overflow: visible !important;
+}
+
+.table {
+  color: #e2e8f0;
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--border);
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.table thead th {
+  font-family: 'Outfit', sans-serif;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: var(--t-gray);
+  border: none;
+  padding: 1rem;
+}
+
+.table tbody tr {
+  background: rgba(30, 41, 59, 0.3);
+  transition: transform 0.2s;
+}
+
+.table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.5);
+  transform: scale(1.005);
+}
+
+.table tbody td {
+  border: none;
+  padding: 1rem;
+  background: transparent !important;
+}
+
+.table tbody td:first-child { border-radius: 12px 0 0 12px; }
+.table tbody td:last-child { border-radius: 0 12px 12px 0; }
+
+.badge-session {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  font-weight: 600;
+}
+
+.tag {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.tag-dano { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.tag-cura { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+.tag-info { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.3); }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+.input-pv-temp {
+  color: var(--t-pvtemp) !important;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.text-pvtemp {
+  color: var(--t-pvtemp) !important;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.3);
+}
+
+/* Forçar visualização do dropdown apenas na tabela de personagens */
+.char-table-container {
+  overflow: visible !important;
+  padding-bottom: 80px;
+}
+
+/* O histórico deve continuar com rolagem */
+.log-container {
+  max-height: 300px;
+  overflow-y: auto !important;
+}
+
+/* Novo Controle Combat unificado em uma linha */
+.combat-input-group {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  height: 32px;
+  transition: all 0.2s;
+}
+
+.combat-input-group:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.combat-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 0 12px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.combat-btn-damage:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--t-red);
+}
+
+.combat-btn-heal:hover {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--t-green);
+}
+
+.combat-field {
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  width: 50px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  height: 100%;
+  outline: none;
+}
+
+.combat-field::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 400;
+}
+
+.dropdown-menu {
+  z-index: 2000 !important;
+}
+
+#tutorialModal .modal-content {
+  background: var(--bg-deep);
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+}
+
+/* Novo estilo para Botões Dinâmicos */
+.btn-apply-positive {
+  color: var(--t-green) !important;
+  border-color: rgba(34, 197, 94, 0.3) !important;
+}
+.btn-apply-positive:hover {
+  background: rgba(34, 197, 94, 0.1) !important;
+}
+
+.btn-apply-negative {
+  color: var(--t-red) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+.btn-apply-negative:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
